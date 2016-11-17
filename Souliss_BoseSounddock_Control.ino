@@ -10,9 +10,9 @@ for this platform.
 
 ***************************************************************************/
 
-//#define SERIAL_DEBUG
+#define SERIAL_DEBUG
 #define IP_ADDRESS	138
-#define HOSTNAME	"bose-sounddock"
+#define HOSTNAME	"souliss-bose-sounddock"
 
 #define	VNET_RESETTIME_INSKETCH
 #define VNET_RESETTIME			0x00042F7	// ((20 Min*60)*1000)/70ms = 17143 => 42F7
@@ -51,7 +51,8 @@ uint8_t ip_gateway[4] = { 192, 168, 1, 1 };
 // This identify the numbers of the logic
 #define POWER_SOCKET          0
 #define VOLUME_UP			  1
-#define VOLUME_DW			  2	
+#define VOLUME_DW			  2
+#define POWER_OFF			  3	
 
 // **** Define here the right pin for your ESP module **** 
 #define	PIN_RELE			5
@@ -70,7 +71,7 @@ int khz = 38; //IR Carrier Frequancy @38 KHz
 // IR code to send
 unsigned int Signal_VolUP[] = { 1000,1500,500,1500,500,500,500,500,500,500,500,500,500,1500,500,1500,500,1500,500,500,500,1500,500,1500,500,1500,500,1500,500,500,500,500,500,500,500,50300,1000,1500,500,1500,500,500,500,500,500,500,500,500,500,1500,500,1500,500,1500,500,500,500,1500,500,1500,500,1500,500,1500,500,500,500,500,500,500,500,50300,1000,1500,500,1500,500,500,500,500,500,500,500,500,500,1500,500,1500,500,1500,500,500,500,1500,500,1500,500,1500,500,1500,500,500,500,500,500,500,500,50304,1000,1500,500,1500,500,500,500,500,500,500,500,500,500,1500,500,1500,500,1500,500,500,500,1500,500,1500,500,1500,500,1500,500,500,500,500,500,500,500,50300,1000,1500,500,1500,500,500,500,500,500,500,500,500,500,1500,500,1500,500,1500,500,500,500,1500,500,1500,500,1500,500,1500,500,500,500,500,500,500,500,50276,1000,1500,500,1500,500,500,500,500,500,500,500,500,500,1500,500,1500,500,1500,500,500,500,1500,500,1500,500,1500,500,1500,500,500,500,500,500,500,500,50300,1000,1500,500,1500,500,500,500,500,500,500,500,500,500,1500,500,1500,500,1500,500,500,500,1500,500,1500,500,1500,500,1500,500,500,500,500,500,500,500,50300,1000,1500,500,1500,500,500,500,500,500,500,500,500,500,1500,500,1500,500,1500,500,500,500,1500,500,1500,500,1500,500,1500,500,500,500,500,500,500,500 }; //AnalysIR Batch Export (IRremote) - RAW
 unsigned int Signal_VolDW[] = { 1000,1500,500,500,500,1500,500,1500,500,1500,500,1500,500,500,500,500,500,500,500,1500,500,500,500,500,500,500,500,500,500,1500,500,1500,500,1500,500,50300,1000,1500,500,500,500,1500,500,1500,500,1500,500,1500,500,500,500,500,500,500,500,1500,500,500,500,500,500,500,500,500,500,1500,500,1500,500,1500,500,50304,1000,1500,500,500,500,1500,500,1500,500,1500,500,1500,500,500,500,500,500,500,500,1500,500,500,500,500,500,500,500,500,500,1500,500,1500,500,1500,500,50300,1000,1500,500,500,500,1500,500,1500,500,1500,500,1500,500,500,500,500,500,500,500,1500,500,500,500,500,500,500,500,500,500,1500,500,1500,500,1500,500,50356,1000,1500,500,500,500,1500,500,1500,500,1500,500,1500,500,500,500,500,500,500,500,1500,500,500,500,500,500,500,500,500,500,1500,500,1500,500,1500,500,50300,1000,1500,500,500,500,1500,500,1500,500,1500,500,1500,500,500,500,500,500,500,500,1500,500,500,500,500,500,500,500,500,500,1500,500,1500,500,1500,500 }; //AnalysIR Batch Export (IRremote) - RAW
-
+unsigned int Signal_PwrOff[] = { 1000,1500,500,1500,500,1500,500,1500,500,1500,500,1500,500,500,500,500,500,500,500,500,500,500,500,500,500,500,500,500,500,1500,500,1500,500,1500,500,50300,1500,1500,500,1500,500,1500,500,1500,500,1500,500,1500,500,500,500,500,500,500,500,500,500,500,500,500,500,500,500,500,500,1500,500,1500,500,1500,500,50280,1000,1500,500,1500,500,1500,500,1500,500,1500,500,1500,500,500,500,500,500,500,500,500,500,500,500,500,500,500,500,500,500,1500,500,1500,500,1500,500,50300,1500,1500,500,1500,500,1500,500,1500,500,1500,500,1500,500,500,500,500,500,500,500,500,500,500,500,500,500,500,500,500,500,1500,500,1500,500,1500,500,50280,1500,1500,500,1500,500,1500,500,1500,500,1500,500,1500,500,500,500,500,500,500,500,500,500,500,500,500,500,500,500,500,500,1500,500,1500,500,1500,500 }; //AnalysIR Batch Export (IRremote) - RAW
 
 void setup()
 {
@@ -81,7 +82,7 @@ void setup()
 	
 
 	//Delay the startup. In case of power outage, this give time to router to start WiFi
-	delay((IP_ADDRESS - 128) * 5000);
+	//delay((IP_ADDRESS - 128) * 5000);
 	Initialize();
 
 	#ifdef SERIAL_DEBUG
@@ -89,11 +90,11 @@ void setup()
 	#endif
 
 	// Connect to the WiFi network with static IP
-	Souliss_SetIPAddress(ip_address, subnet_mask, ip_gateway);
+	//Souliss_SetIPAddress(ip_address, subnet_mask, ip_gateway);
 
 	//DHCP con indirizzo fisso con reservation
-	//GetIPAddress();
-	//SetAsGateway(myvNet_dhcp);
+	GetIPAddress();
+	SetAsGateway(myvNet_dhcp);
 
 	#ifdef SERIAL_DEBUG
 		Serial.println("WiFi Joined, setting up stuff");
@@ -103,6 +104,7 @@ void setup()
 	Set_SimpleLight(POWER_SOCKET);			// Define a T11 to hanlde the relè
 	Souliss_SetT14(memory_map, VOLUME_UP);	//Set logic to turn up volume
 	Souliss_SetT14(memory_map, VOLUME_DW);  //Set logic to turn down volume
+	Souliss_SetT14(memory_map, POWER_OFF);  //Set logic to turn on and OFF
 
 	pinMode(PIN_RELE, OUTPUT);				// Use pin as output
 	pinMode(PIN_BUTTON, INPUT);				// Use pin as input
@@ -191,6 +193,7 @@ void loop()
 			//T14 logic handling
 			Souliss_Logic_T11(memory_map, VOLUME_UP, &data_changed);
 			Souliss_Logic_T11(memory_map, VOLUME_DW, &data_changed);
+			Souliss_Logic_T11(memory_map, POWER_OFF, &data_changed);
 
 			//If one button is pressed, the relevand IR code will be sent
 			if (mOutput(VOLUME_UP) == 1) {
@@ -208,6 +211,15 @@ void loop()
 				#endif
 				mOutput(VOLUME_DW) = 0;
 			}
+
+			if (mOutput(POWER_OFF) == 1) {
+				irsend.sendRaw(Signal_PwrOff, sizeof(Signal_PwrOff) / sizeof(Signal_PwrOff[0]), khz); //Note the approach used to automatically calculate the size of the array.
+			#ifdef SERIAL_DEBUG
+				Serial.println("IR PowerOff Sent");
+			#endif
+				mOutput(POWER_OFF) = 0;
+			}
+
 		
 		}
 
