@@ -10,6 +10,7 @@ for this platform.
 
 ***************************************************************************/
 
+//#define SERIAL_DEBUG
 #define IP_ADDRESS	138
 #define HOSTNAME	"bose-sounddock"
 
@@ -73,9 +74,19 @@ unsigned int Signal_VolDW[] = { 1000,1500,500,500,500,1500,500,1500,500,1500,500
 
 void setup()
 {
+	#ifdef SERIAL_DEBUG
+		Serial.begin(115200);
+		Serial.println("Node Delay Starting");
+	#endif
+	
+
 	//Delay the startup. In case of power outage, this give time to router to start WiFi
 	delay((IP_ADDRESS - 128) * 5000);
 	Initialize();
+
+	#ifdef SERIAL_DEBUG
+		Serial.println("Node Inizialized");
+	#endif
 
 	// Connect to the WiFi network with static IP
 	Souliss_SetIPAddress(ip_address, subnet_mask, ip_gateway);
@@ -83,6 +94,11 @@ void setup()
 	//DHCP con indirizzo fisso con reservation
 	//GetIPAddress();
 	//SetAsGateway(myvNet_dhcp);
+
+	#ifdef SERIAL_DEBUG
+		Serial.println("WiFi Joined, setting up stuff");
+	#endif
+
 
 	Set_SimpleLight(POWER_SOCKET);			// Define a T11 to hanlde the relè
 	Souliss_SetT14(memory_map, VOLUME_UP);	//Set logic to turn up volume
@@ -99,8 +115,17 @@ void setup()
 
 	//Inizialize IR and Serial
 	irsend.begin();
-	Serial.begin(115200);
-	Serial.println("Node Init");
+
+	#ifdef SERIAL_DEBUG
+		Serial.print("MAC: ");
+		Serial.println(WiFi.macAddress());
+		Serial.print("IP:  ");
+		Serial.println(WiFi.localIP());
+		Serial.print("Subnet: ");
+		Serial.println(WiFi.subnetMask());
+		Serial.print("Gateway: ");
+		Serial.println("Node Initialized");
+	#endif
 }
 
 void loop()
@@ -114,12 +139,16 @@ void loop()
 			// Detect the button press. Short press toggle T11, long press reset the node
 			U8 invalue = LowDigInHold(PIN_BUTTON, Souliss_T1n_ToggleCmd, value_hold, POWER_SOCKET);
 			if (invalue == Souliss_T1n_ToggleCmd) {
-				Serial.println("TOGGLE");
+				#ifdef SERIAL_DEBUG
+					Serial.println("TOGGLE");
+				#endif
 				mInput(POWER_SOCKET) = Souliss_T1n_ToggleCmd;
 			}
 			else if (invalue == value_hold) {
 				// reset
-				Serial.println("REBOOT");
+				#ifdef SERIAL_DEBUG
+					Serial.println("REBOOT");
+				#endif
 				delay(1000);
 				ESP.reset();
 			}
@@ -148,10 +177,12 @@ void loop()
 			//Check if joined to gateway
 			check_if_joined();
 
-			if (!joined) {
-				Serial.print("JOIN STATUS=");
-				Serial.println(joined);
-			}
+			#ifdef SERIAL_DEBUG
+				if (!joined) {
+					Serial.print("JOIN STATUS=");
+					Serial.println(joined);
+				}
+			#endif
 
 		}
 
@@ -164,13 +195,17 @@ void loop()
 			//If one button is pressed, the relevand IR code will be sent
 			if (mOutput(VOLUME_UP) == 1) {
 				irsend.sendRaw(Signal_VolUP, sizeof(Signal_VolUP) / sizeof(Signal_VolUP[0]), khz); //Note the approach used to automatically calculate the size of the array.
-				Serial.println("IR VOL+ Sent");
+				#ifdef SERIAL_DEBUG
+					Serial.println("IR VOL+ Sent");
+				#endif
 				mOutput(VOLUME_UP) = 0;
 			}
 
 			if (mOutput(VOLUME_DW) == 1) {
 				irsend.sendRaw(Signal_VolDW, sizeof(Signal_VolDW) / sizeof(Signal_VolDW[0]), khz); //Note the approach used to automatically calculate the size of the array.
-				Serial.println("IR VOL- Sent");
+				#ifdef SERIAL_DEBUG
+					Serial.println("IR VOL- Sent");
+				#endif
 				mOutput(VOLUME_DW) = 0;
 			}
 		
