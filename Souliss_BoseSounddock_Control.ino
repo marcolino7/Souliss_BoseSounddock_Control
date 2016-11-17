@@ -1,6 +1,7 @@
 /**************************************************************************
 Souliss - Power Socket Porting for Expressif ESP8266
 		  Adding IR library to control Bose SoundDock III Volume
+			https://github.com/markszabo/IRremoteESP8266
 
 It use static IP Addressing
 
@@ -8,6 +9,16 @@ Load this code on ESP8266 board using the porting of the Arduino core
 for this platform.
 
 ***************************************************************************/
+
+#define IP_ADDRESS	138
+#define HOSTNAME	"bose-sounddock"
+
+#define	VNET_RESETTIME_INSKETCH
+#define VNET_RESETTIME			0x00042F7	// ((20 Min*60)*1000)/70ms = 17143 => 42F7
+#define VNET_HARDRESET			ESP.reset()
+
+#define VNET_DEBUG_INSKETCH
+#define VNET_DEBUG  		0
 
 // Configure the framework
 #include "bconf/MCU_ESP8266.h"              // Load the code directly on the ESP8266
@@ -24,20 +35,19 @@ for this platform.
 
 // Include framework code and libraries
 #include <ESP8266WiFi.h>
+#include <ESP8266mDNS.h>
+#include <WiFiUdp.h>
+#include <ArduinoOTA.h>
 #include <EEPROM.h>
 #include "Souliss.h"
 #include <IRremoteESP8266.h>
 
-#define VNET_DEBUG_INSKETCH
-#define VNET_DEBUG  		1
-
 // Define the network configuration according to your router settings
-uint8_t ip_address[4] = { 192, 168, 1, 138 };
+uint8_t ip_address[4] = { 192, 168, 1, IP_ADDRESS };
 uint8_t subnet_mask[4] = { 255, 255, 255, 0 };
 uint8_t ip_gateway[4] = { 192, 168, 1, 1 };
 
-
-// This identify the number of the LED logic
+// This identify the numbers of the logic
 #define POWER_SOCKET          0
 #define VOLUME_UP			  1
 #define VOLUME_DW			  2	
@@ -56,18 +66,25 @@ U8 value_hold = 0x068;
 //IR Stuff
 IRsend irsend(PIN_IR);
 int khz = 38; //IR Carrier Frequancy @38 KHz
+// IR code to send
 unsigned int Signal_VolUP[] = { 1000,1500,500,1500,500,500,500,500,500,500,500,500,500,1500,500,1500,500,1500,500,500,500,1500,500,1500,500,1500,500,1500,500,500,500,500,500,500,500,50300,1000,1500,500,1500,500,500,500,500,500,500,500,500,500,1500,500,1500,500,1500,500,500,500,1500,500,1500,500,1500,500,1500,500,500,500,500,500,500,500,50300,1000,1500,500,1500,500,500,500,500,500,500,500,500,500,1500,500,1500,500,1500,500,500,500,1500,500,1500,500,1500,500,1500,500,500,500,500,500,500,500,50304,1000,1500,500,1500,500,500,500,500,500,500,500,500,500,1500,500,1500,500,1500,500,500,500,1500,500,1500,500,1500,500,1500,500,500,500,500,500,500,500,50300,1000,1500,500,1500,500,500,500,500,500,500,500,500,500,1500,500,1500,500,1500,500,500,500,1500,500,1500,500,1500,500,1500,500,500,500,500,500,500,500,50276,1000,1500,500,1500,500,500,500,500,500,500,500,500,500,1500,500,1500,500,1500,500,500,500,1500,500,1500,500,1500,500,1500,500,500,500,500,500,500,500,50300,1000,1500,500,1500,500,500,500,500,500,500,500,500,500,1500,500,1500,500,1500,500,500,500,1500,500,1500,500,1500,500,1500,500,500,500,500,500,500,500,50300,1000,1500,500,1500,500,500,500,500,500,500,500,500,500,1500,500,1500,500,1500,500,500,500,1500,500,1500,500,1500,500,1500,500,500,500,500,500,500,500 }; //AnalysIR Batch Export (IRremote) - RAW
 unsigned int Signal_VolDW[] = { 1000,1500,500,500,500,1500,500,1500,500,1500,500,1500,500,500,500,500,500,500,500,1500,500,500,500,500,500,500,500,500,500,1500,500,1500,500,1500,500,50300,1000,1500,500,500,500,1500,500,1500,500,1500,500,1500,500,500,500,500,500,500,500,1500,500,500,500,500,500,500,500,500,500,1500,500,1500,500,1500,500,50304,1000,1500,500,500,500,1500,500,1500,500,1500,500,1500,500,500,500,500,500,500,500,1500,500,500,500,500,500,500,500,500,500,1500,500,1500,500,1500,500,50300,1000,1500,500,500,500,1500,500,1500,500,1500,500,1500,500,500,500,500,500,500,500,1500,500,500,500,500,500,500,500,500,500,1500,500,1500,500,1500,500,50356,1000,1500,500,500,500,1500,500,1500,500,1500,500,1500,500,500,500,500,500,500,500,1500,500,500,500,500,500,500,500,500,500,1500,500,1500,500,1500,500,50300,1000,1500,500,500,500,1500,500,1500,500,1500,500,1500,500,500,500,500,500,500,500,1500,500,500,500,500,500,500,500,500,500,1500,500,1500,500,1500,500 }; //AnalysIR Batch Export (IRremote) - RAW
 
 
 void setup()
 {
+	//Delay the startup. In case of power outage, this give time to router to start WiFi
+	delay((IP_ADDRESS - 128) * 5000);
 	Initialize();
 
 	// Connect to the WiFi network with static IP
 	Souliss_SetIPAddress(ip_address, subnet_mask, ip_gateway);
 
-	Set_SimpleLight(POWER_SOCKET);			// Define a T11 light logic
+	//DHCP con indirizzo fisso con reservation
+	//GetIPAddress();
+	//SetAsGateway(myvNet_dhcp);
+
+	Set_SimpleLight(POWER_SOCKET);			// Define a T11 to hanlde the relè
 	Souliss_SetT14(memory_map, VOLUME_UP);	//Set logic to turn up volume
 	Souliss_SetT14(memory_map, VOLUME_DW);  //Set logic to turn down volume
 
@@ -76,6 +93,11 @@ void setup()
 	pinMode(PIN_LED, OUTPUT);				// Use pin as output
 	pinMode(PIN_IR, OUTPUT);				// Use pin as output
 
+	//Enable OTA
+	ArduinoOTA.setHostname(HOSTNAME);
+	ArduinoOTA.begin();
+
+	//Inizialize IR and Serial
 	irsend.begin();
 	Serial.begin(115200);
 	Serial.println("Node Init");
@@ -89,7 +111,7 @@ void loop()
 
 		FAST_50ms() {   // We process the logic and relevant input and output every 50 milliseconds
 
-						// Detect the button press. Short press toggle, long press reset the node
+			// Detect the button press. Short press toggle T11, long press reset the node
 			U8 invalue = LowDigInHold(PIN_BUTTON, Souliss_T1n_ToggleCmd, value_hold, POWER_SOCKET);
 			if (invalue == Souliss_T1n_ToggleCmd) {
 				Serial.println("TOGGLE");
@@ -106,6 +128,7 @@ void loop()
 			DigOut(PIN_RELE, Souliss_T1n_Coil, POWER_SOCKET);
 
 			//Check if joined and take control of the led
+			//If not Joined the led blink, if Joined the led reflect the T11 Status
 			if (joined == 1) {
 				if (mOutput(POWER_SOCKET) == 1) {
 					digitalWrite(PIN_LED, HIGH);
@@ -133,10 +156,12 @@ void loop()
 		}
 
 		FAST_710ms() {
-		
+			
+			//T14 logic handling
 			Souliss_Logic_T11(memory_map, VOLUME_UP, &data_changed);
 			Souliss_Logic_T11(memory_map, VOLUME_DW, &data_changed);
 
+			//If one button is pressed, the relevand IR code will be sent
 			if (mOutput(VOLUME_UP) == 1) {
 				irsend.sendRaw(Signal_VolUP, sizeof(Signal_VolUP) / sizeof(Signal_VolUP[0]), khz); //Note the approach used to automatically calculate the size of the array.
 				Serial.println("IR VOL+ Sent");
@@ -153,6 +178,7 @@ void loop()
 
 		FAST_PeerComms();
 	}
+	ArduinoOTA.handle();
 }
 
 //This routine check for peer is joined to Souliss Network
@@ -173,25 +199,3 @@ void check_if_joined() {
 		joined = 1;
 	}
 }
-
-
-
-/*#include <IRremoteESP8266.h>
-
-IRsend irsend(4);
-
-void setup()
-{
-	irsend.begin();
-	Serial.begin(115200);
-}
-
-void loop() {
-	Serial.println("Sending VolUP");
-	int khz = 33; // 38kHz carrier frequency for the NEC protocol
-	unsigned int irSignal[] = { 1000,1500,500,1500,500,500,500,500,500,500,500,500,500,1500,500,1500,500,1500,500,500,500,1500,500,1500,500,1500,500,1500,500,500,500,500,500,500,500,50300,1000,1500,500,1500,500,500,500,500,500,500,500,500,500,1500,500,1500,500,1500,500,500,500,1500,500,1500,500,1500,500,1500,500,500,500,500,500,500,500,50300,1000,1500,500,1500,500,500,500,500,500,500,500,500,500,1500,500,1500,500,1500,500,500,500,1500,500,1500,500,1500,500,1500,500,500,500,500,500,500,500,50304,1000,1500,500,1500,500,500,500,500,500,500,500,500,500,1500,500,1500,500,1500,500,500,500,1500,500,1500,500,1500,500,1500,500,500,500,500,500,500,500,50300,1000,1500,500,1500,500,500,500,500,500,500,500,500,500,1500,500,1500,500,1500,500,500,500,1500,500,1500,500,1500,500,1500,500,500,500,500,500,500,500,50276,1000,1500,500,1500,500,500,500,500,500,500,500,500,500,1500,500,1500,500,1500,500,500,500,1500,500,1500,500,1500,500,1500,500,500,500,500,500,500,500,50300,1000,1500,500,1500,500,500,500,500,500,500,500,500,500,1500,500,1500,500,1500,500,500,500,1500,500,1500,500,1500,500,1500,500,500,500,500,500,500,500,50300,1000,1500,500,1500,500,500,500,500,500,500,500,500,500,1500,500,1500,500,1500,500,500,500,1500,500,1500,500,1500,500,1500,500,500,500,500,500,500,500 }; //AnalysIR Batch Export (IRremote) - RAW
-
-	irsend.sendRaw(irSignal, sizeof(irSignal) / sizeof(irSignal[0]), khz); //Note the approach used to automatically calculate the size of the array.
-
-	delay(1000); //In this example, the signal will be repeated every 5 seconds, approximately.
-}*/
