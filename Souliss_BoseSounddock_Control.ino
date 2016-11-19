@@ -10,8 +10,7 @@ for this platform.
 
 ***************************************************************************/
 
-#define SERIAL_DEBUG
-#define IP_ADDRESS	138
+//#define SERIAL_DEBUG
 #define HOSTNAME	"souliss-bose-sounddock"
 
 #define	VNET_RESETTIME_INSKETCH
@@ -43,11 +42,6 @@ for this platform.
 #include "Souliss.h"
 #include <IRremoteESP8266.h>
 
-// Define the network configuration according to your router settings
-uint8_t ip_address[4] = { 192, 168, 1, IP_ADDRESS };
-uint8_t subnet_mask[4] = { 255, 255, 255, 0 };
-uint8_t ip_gateway[4] = { 192, 168, 1, 1 };
-
 // This identify the numbers of the logic
 #define POWER_SOCKET          0
 #define VOLUME_UP			  1
@@ -55,10 +49,10 @@ uint8_t ip_gateway[4] = { 192, 168, 1, 1 };
 #define POWER_OFF			  3	
 
 // **** Define here the right pin for your ESP module **** 
-#define	PIN_RELE			5
+#define	PIN_RELE			4
 #define PIN_BUTTON			0
 #define PIN_LED				16
-#define PIN_IR				4
+#define PIN_IR				5
 
 //Useful Variable
 byte led_status = 0;
@@ -82,15 +76,16 @@ void setup()
 	
 
 	//Delay the startup. In case of power outage, this give time to router to start WiFi
-	//delay((IP_ADDRESS - 128) * 5000);
+	#ifndef SERIAL_DEBUG
+		//Inserire qua l'ultima cifra dell'indirizzo IP per avere un delay all'avvio diverso per ogni nodo
+		delay((138 - 128) * 5000);
+	#endif
 	Initialize();
 
 	#ifdef SERIAL_DEBUG
 		Serial.println("Node Inizialized");
 	#endif
 
-	// Connect to the WiFi network with static IP
-	//Souliss_SetIPAddress(ip_address, subnet_mask, ip_gateway);
 
 	//DHCP con indirizzo fisso con reservation
 	GetIPAddress();
