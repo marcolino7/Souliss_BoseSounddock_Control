@@ -78,12 +78,13 @@ void setup()
 	//Delay the startup. In case of power outage, this give time to router to start WiFi
 	#ifndef SERIAL_DEBUG
 		//Inserire qua l'ultima cifra dell'indirizzo IP per avere un delay all'avvio diverso per ogni nodo
-		delay((138 - 128) * 5000);
+		//delay((138 - 128) * 5000);
+		delay(10000);
 	#endif
 	Initialize();
 
 	#ifdef SERIAL_DEBUG
-		Serial.println("Node Inizialized");
+		Serial.println("Node Inizializing");
 	#endif
 
 
@@ -123,6 +124,7 @@ void setup()
 		Serial.print("Gateway: ");
 		Serial.println("Node Initialized");
 	#endif
+
 }
 
 void loop()
@@ -170,6 +172,40 @@ void loop()
 			Logic_SimpleLight(POWER_SOCKET);
 		}
 
+		FAST_210ms() {
+
+			//T14 logic handling
+			Souliss_Logic_T11(memory_map, VOLUME_UP, &data_changed);
+			Souliss_Logic_T11(memory_map, VOLUME_DW, &data_changed);
+			Souliss_Logic_T11(memory_map, POWER_OFF, &data_changed);
+
+			//If one button is pressed, the relevand IR code will be sent
+			if (mOutput(VOLUME_UP) == 1) {
+				irsend.sendRaw(Signal_VolUP, sizeof(Signal_VolUP) / sizeof(Signal_VolUP[0]), khz); //Note the approach used to automatically calculate the size of the array.
+			#ifdef SERIAL_DEBUG
+				Serial.println("IR VOL+ Sent");
+			#endif
+				mOutput(VOLUME_UP) = 0;
+			}
+
+			if (mOutput(VOLUME_DW) == 1) {
+				irsend.sendRaw(Signal_VolDW, sizeof(Signal_VolDW) / sizeof(Signal_VolDW[0]), khz); //Note the approach used to automatically calculate the size of the array.
+			#ifdef SERIAL_DEBUG
+				Serial.println("IR VOL- Sent");
+			#endif
+				mOutput(VOLUME_DW) = 0;
+			}
+
+			if (mOutput(POWER_OFF) == 1) {
+				irsend.sendRaw(Signal_PwrOff, sizeof(Signal_PwrOff) / sizeof(Signal_PwrOff[0]), khz); //Note the approach used to automatically calculate the size of the array.
+			#ifdef SERIAL_DEBUG
+				Serial.println("IR PowerOff Sent");
+			#endif
+				mOutput(POWER_OFF) = 0;
+			}
+
+		}
+
 		FAST_510ms() {
 			//Check if joined to gateway
 			check_if_joined();
@@ -184,38 +220,6 @@ void loop()
 		}
 
 		FAST_710ms() {
-			
-			//T14 logic handling
-			Souliss_Logic_T11(memory_map, VOLUME_UP, &data_changed);
-			Souliss_Logic_T11(memory_map, VOLUME_DW, &data_changed);
-			Souliss_Logic_T11(memory_map, POWER_OFF, &data_changed);
-
-			//If one button is pressed, the relevand IR code will be sent
-			if (mOutput(VOLUME_UP) == 1) {
-				irsend.sendRaw(Signal_VolUP, sizeof(Signal_VolUP) / sizeof(Signal_VolUP[0]), khz); //Note the approach used to automatically calculate the size of the array.
-				#ifdef SERIAL_DEBUG
-					Serial.println("IR VOL+ Sent");
-				#endif
-				mOutput(VOLUME_UP) = 0;
-			}
-
-			if (mOutput(VOLUME_DW) == 1) {
-				irsend.sendRaw(Signal_VolDW, sizeof(Signal_VolDW) / sizeof(Signal_VolDW[0]), khz); //Note the approach used to automatically calculate the size of the array.
-				#ifdef SERIAL_DEBUG
-					Serial.println("IR VOL- Sent");
-				#endif
-				mOutput(VOLUME_DW) = 0;
-			}
-
-			if (mOutput(POWER_OFF) == 1) {
-				irsend.sendRaw(Signal_PwrOff, sizeof(Signal_PwrOff) / sizeof(Signal_PwrOff[0]), khz); //Note the approach used to automatically calculate the size of the array.
-			#ifdef SERIAL_DEBUG
-				Serial.println("IR PowerOff Sent");
-			#endif
-				mOutput(POWER_OFF) = 0;
-			}
-
-		
 		}
 
 		FAST_PeerComms();
