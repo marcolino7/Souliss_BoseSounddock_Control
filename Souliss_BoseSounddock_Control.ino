@@ -52,7 +52,12 @@ uint8_t ip_gateway[4] = { 192, 168, 1, 1 };
 #define POWER_SOCKET          0
 #define VOLUME_UP			  1
 #define VOLUME_DW			  2
-#define POWER_OFF			  3	
+#define POWER_OFF			  3
+#define T_WIFI_STRDB		  4	//It takes 2 slots
+#define T_WIFI_STR			  6	//It takes 2 slots
+
+//Deadband for analog values
+#define NODEADBAND		0				//Se la variazione è superio del 0,1% aggiorno
 
 // **** Define here the right pin for your ESP module **** 
 #define	PIN_RELE			4
@@ -64,6 +69,10 @@ uint8_t ip_gateway[4] = { 192, 168, 1, 1 };
 byte led_status = 0;
 byte joined = 0;
 U8 value_hold = 0x068;
+
+//Variable to Handle WiFio Signal
+long rssi = 0;
+int bars = 0;
 
 //IR Stuff
 IRsend irsend(PIN_IR);
@@ -110,6 +119,8 @@ void setup()
 	Souliss_SetT14(memory_map, VOLUME_UP);	//Set logic to turn up volume
 	Souliss_SetT14(memory_map, VOLUME_DW);  //Set logic to turn down volume
 	Souliss_SetT14(memory_map, POWER_OFF);  //Set logic to turn on and OFF
+	Souliss_SetT51(memory_map, T_WIFI_STRDB);	//Imposto il tipico per contenere il segnale del Wifi in decibel
+	Souliss_SetT51(memory_map, T_WIFI_STR);	//Imposto il tipico per contenere il segnale del Wifi in barre da 1 a 5
 
 	pinMode(PIN_RELE, OUTPUT);				// Use pin as output
 	pinMode(PIN_BUTTON, INPUT);				// Use pin as input
@@ -213,6 +224,9 @@ void loop()
 				mOutput(POWER_OFF) = 0;
 			}
 
+			//Processa le logiche per il segnale WiFi
+			Souliss_Logic_T51(memory_map, T_WIFI_STRDB, NODEADBAND, &data_changed);
+			Souliss_Logic_T51(memory_map, T_WIFI_STR, NODEADBAND, &data_changed);
 		}
 
 		FAST_510ms() {
@@ -232,8 +246,48 @@ void loop()
 		}
 
 		FAST_PeerComms();
+		ArduinoOTA.handle();
 	}
-	ArduinoOTA.handle();
+	EXECUTESLOW() {
+		UPDATESLOW();
+		SLOW_10s() {
+			//Check wifi signal
+			check_wifi_signal();
+		}
+	}
+}
+
+void check_wifi_signal() {
+	rssi = WiFi.RSSI();
+
+	if (rssi > -55) {
+		bars = 5;
+	}
+	else if (rssi < -55 & rssi >= -65) {
+		bars = 4;
+	}
+	else if (rssi < -65 & rssi >= -70) {
+		bars = 3;
+	}
+	else if (rssi < -70 & rssi >= -78) {
+		bars = 2;
+	}
+	else if (rssi < -78 & rssi > -82) {
+		bars = 1;
+	}
+	else {
+		bars = 0;
+	}
+	float f_rssi = (float)rssi;
+	float f_bars = (float)bars;
+	Souliss_ImportAnalog(memory_map, T_WIFI_STRDB, &f_rssi);
+	Souliss_ImportAnalog(memory_map, T_WIFI_STR, &f_bars);
+#ifdef SERIAL_DEBUG
+	Serial.print("wifi rssi:");
+	Serial.println(rssi);
+	Serial.print("wifi bars:");
+	Serial.println(bars);
+#endif
 }
 
 //This routine check for peer is joined to Souliss Network
